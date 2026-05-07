@@ -13,12 +13,14 @@ func main() {
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil { return }
 
-		defer conn.Close(websocket.StatusNormalClosure, "")
+		defer func() { _ = conn.Close(websocket.StatusNormalClosure, "") }()
 
 		cli := client.Client { Conn: conn }
 		cli.Run()
 	})
 
 	fmt.Println("서버 시작: localhost:8080")
-	http.ListenAndServe(":8080", nil)
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Println("서버 에러:", err)
+	}
 }

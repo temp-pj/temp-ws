@@ -15,6 +15,6 @@ func (c *Client) Run() {
 	for {
 		msgType, data, err := c.Conn.Read(ctx)
 		if err != nil { return }
-		c.Conn.Write(ctx, msgType, data)
+		_ = c.Conn.Write(ctx, msgType, data)
 	}
 }
