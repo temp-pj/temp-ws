@@ -47,6 +47,7 @@ const (
 	Waiting RoomState = iota
 	Playing
 	Finished
+	Closed
 )
 
 func (s RoomState) String() string {
@@ -57,6 +58,8 @@ func (s RoomState) String() string {
 			return "playing"
 		case Finished:
 			return "finished"
+		case Closed:
+			return "closed"
 	}
 
 	return "unknown"
