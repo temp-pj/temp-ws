@@ -2,12 +2,14 @@ package client
 
 import (
 	"context"
+	"temp-ws/internal/message"
 
 	"github.com/coder/websocket"
 )
 
 type Client struct {
 	Conn *websocket.Conn
+	Send chan *message.Message
 }
 
 func (c *Client) Run() { 
