@@ -49,9 +49,9 @@ func TestBroadcast(t *testing.T) {
 	room := NewRoom()
 	go room.Run()
 
-	firstClient := &client.Client { Send: make(chan *message.Message) }
-	secondClient := &client.Client { Send: make(chan *message.Message) }
-	thirdClient := &client.Client { Send: make(chan *message.Message) }
+	firstClient := &client.Client { Send: make(chan *message.Message, 3) }
+	secondClient := &client.Client { Send: make(chan *message.Message, 3) }
+	thirdClient := &client.Client { Send: make(chan *message.Message, 3) }
 
 	room.register <- firstClient
 	room.register <- secondClient
@@ -61,6 +61,7 @@ func TestBroadcast(t *testing.T) {
 
 	room.broadcast <- &msg
 
+	
 
 	received := <- firstClient.Send
 	if received != &msg { t.Error("브로드캐스트 안됨") }
