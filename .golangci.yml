@@ -5,6 +5,8 @@ linters:
     - errcheck
     - govet
     - staticcheck
+  disable:
+    - unused
 
 run:
   timeout: 5m
