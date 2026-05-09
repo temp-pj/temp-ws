@@ -26,8 +26,18 @@ func (r *Room) Run() {
 			
 			case message := <- r.broadcast:
 				for client := range r.clients {
-					client.Send <- message
+					select {
+						case client.Send <- message:
+
+						default: 
+							delete(r.clients, client)
+							close(client.Send)
+
+					}
+					
 				}
+			
+
 		}
 	}
 }
