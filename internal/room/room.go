@@ -18,6 +18,7 @@ func (r *Room) Run() {
 	for {
 		select {
 			case client := <- r.register:
+				if client == nil || client.Send == nil { continue }
 				r.clients[client] = true
 
 			case client := <- r.unregister:
