@@ -24,7 +24,7 @@ func (r *Room) Run() {
 				delete(r.clients, client)
 			
 			case message := <- r.broadcast:
-				for client, _ := range r.clients {
+				for client := range r.clients {
 					client.Send <- message
 				}
 		}
