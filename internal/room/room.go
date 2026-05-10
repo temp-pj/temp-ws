@@ -12,6 +12,7 @@ type Room struct {
 	broadcast chan *message.Message
 	roomID string
 	roomState RoomState
+	quit chan struct{}
 }
 
 func (r *Room) Run() {
@@ -35,6 +36,7 @@ func (r *Room) Run() {
 
 					}
 				}
+			case <- r.quit: return 
 			
 
 		}

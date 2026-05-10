@@ -36,6 +36,11 @@ func (h *Hub) FindRoom(roomID string) *Room {
 
 func (h *Hub) DeleteRoom(roomID string) {
 	h.mu.Lock()
+	room := h.rooms[roomID]
 	defer h.mu.Unlock()
 	delete(h.rooms, roomID)
+
+	if room != nil {
+		close(room.quit)
+	}
 }
