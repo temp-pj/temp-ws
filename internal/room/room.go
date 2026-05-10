@@ -24,8 +24,18 @@ func (r *Room) Run() {
 				if client == nil || client.Send == nil { continue }
 				r.clients[client] = true
 
+				msg := message.New(message.TypePlayerJoined, message.PlayerJoinedPayload { PlayerID: client.ID })
+				for c := range r.clients {
+					c.Send <- msg
+				}
+
 			case client := <- r.unregister:
 				delete(r.clients, client)
+
+				msg := message.New(message.TypePlayerLeft, message.PlayerLeftPayload { PlayerID: client.ID })
+				for c := range r.clients {
+					c.Send <- msg
+				}
 			
 			case message := <- r.broadcast:
 				for client := range r.clients {
