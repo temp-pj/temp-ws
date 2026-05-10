@@ -59,6 +59,18 @@ func (r *Room) Close() {
 	  r.closeOnce.Do(func() { close(r.quit) })
 }
 
+func (r *Room) Register(c *client.Client) {
+	r.register <- c
+}
+
+func (r *Room) Unregister(c *client.Client) {
+	r.unregister <- c
+}
+
+func (r *Room) Broadcast(msg *message.Message) {
+	r.broadcast <- msg
+}
+
 func NewRoom(roomID string) *Room {
 	return &Room {
 		clients: make(map[* client.Client]bool),
