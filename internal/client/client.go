@@ -20,7 +20,7 @@ func (c *Client) Run() {
 	go func() {
 		for msg := range c.Send {
 			data, _ := json.Marshal(msg)
-			c.Conn.Write(ctx, websocket.MessageText, data)
+			_ = c.Conn.Write(ctx, websocket.MessageText, data)
 		}
 	}()
 

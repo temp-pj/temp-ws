@@ -24,11 +24,11 @@ func main() {
 		var currentRoom *room.Room
 
 		if roomID == "" {
-			currentRoom, roomID = hub.CreateRoom()
+			currentRoom, _ = hub.CreateRoom()
 		} else {
 			currentRoom = hub.FindRoom(roomID)
 			if currentRoom == nil {
-				conn.Close(websocket.StatusPolicyViolation, "room not found")
+				_ = conn.Close(websocket.StatusPolicyViolation, "room not found")
 				return
 			}
 		}
