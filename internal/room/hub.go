@@ -41,6 +41,6 @@ func (h *Hub) DeleteRoom(roomID string) {
 	delete(h.rooms, roomID)
 
 	if room != nil {
-		close(room.quit)
+		room.Close()
 	}
 }

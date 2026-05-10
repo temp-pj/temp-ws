@@ -1,6 +1,7 @@
 package room
 
 import (
+	"sync"
 	"temp-ws/internal/client"
 	"temp-ws/internal/message"
 )
@@ -13,6 +14,7 @@ type Room struct {
 	roomID string
 	roomState RoomState
 	quit chan struct{}
+	closeOnce sync.Once
 }
 
 func (r *Room) Run() {
@@ -43,6 +45,10 @@ func (r *Room) Run() {
 	}
 }
 
+func (r *Room) Close() {
+	  r.closeOnce.Do(func() { close(r.quit) })
+}
+
 func NewRoom(roomID string) *Room {
 	return &Room {
 		clients: make(map[* client.Client]bool),
@@ -51,6 +57,7 @@ func NewRoom(roomID string) *Room {
 		broadcast: make(chan *message.Message),
 		roomID: roomID,
 		roomState: Waiting,
+		quit: make(chan struct{}),
 	}
 }
 
