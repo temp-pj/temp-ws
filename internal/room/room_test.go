@@ -6,10 +6,13 @@ import (
 	"temp-ws/internal/message"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestRegister(t *testing.T) {
-	room := NewRoom()
+	uuid := uuid.NewString()
+	room := NewRoom(uuid)
 	go room.Run()
 	client := &client.Client { Send: make(chan *message.Message) }
 
@@ -26,7 +29,8 @@ func TestRegister(t *testing.T) {
 }
 
 func TestUnRegister(t *testing.T) {
-	room := NewRoom()
+	uuid := uuid.NewString()
+	room := NewRoom(uuid)
 	go room.Run()
 	client := &client.Client { Send: make(chan *message.Message) }
 
@@ -46,7 +50,8 @@ func TestUnRegister(t *testing.T) {
 }
 
 func TestBroadcast(t *testing.T) {
-	room := NewRoom()
+	uuid := uuid.NewString()
+	room := NewRoom(uuid)
 	go room.Run()
 
 	firstClient := &client.Client { Send: make(chan *message.Message, 3) }

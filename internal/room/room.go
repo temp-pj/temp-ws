@@ -34,7 +34,6 @@ func (r *Room) Run() {
 							close(client.Send)
 
 					}
-					
 				}
 			
 
@@ -42,12 +41,14 @@ func (r *Room) Run() {
 	}
 }
 
-func NewRoom() *Room {
+func NewRoom(roomID string) *Room {
 	return &Room {
 		clients: make(map[* client.Client]bool),
 		register: make(chan *client.Client),
 		unregister: make(chan *client.Client),
 		broadcast: make(chan *message.Message),
+		roomID: roomID,
+		roomState: Waiting,
 	}
 }
 
