@@ -24,17 +24,35 @@ func (r *Room) Run() {
 				if client == nil || client.Send == nil { continue }
 				r.clients[client] = true
 
-				msg := message.New(message.TypePlayerJoined, message.PlayerJoinedPayload { PlayerID: client.ID })
+				msg, err := message.New(message.TypePlayerJoined, message.PlayerJoinedPayload { PlayerID: client.ID })
+				if err != nil { continue }
+				
 				for c := range r.clients {
-					c.Send <- msg
+					select {
+						case c.Send <- msg:
+
+						default:
+							delete(r.clients, c)
+							close(c.Send)
+					}
+					
 				}
 
 			case client := <- r.unregister:
 				delete(r.clients, client)
+				close(client.Send)
 
-				msg := message.New(message.TypePlayerLeft, message.PlayerLeftPayload { PlayerID: client.ID })
+				msg, err := message.New(message.TypePlayerLeft, message.PlayerLeftPayload { PlayerID: client.ID })
+				if err != nil { continue }
+
 				for c := range r.clients {
-					c.Send <- msg
+					select {
+						case c.Send <- msg:
+
+						default:
+							delete(r.clients, c)
+							close(c.Send)
+					}
 				}
 			
 			case message := <- r.broadcast:
