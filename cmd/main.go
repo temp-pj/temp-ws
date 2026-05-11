@@ -33,8 +33,9 @@ func main() {
 			}
 		}
 
-		cli := client.Client { ID: uuid.NewString(), Conn: conn, Send: make(chan *message.Message, 1) }
+		cli := client.Client { ID: uuid.NewString(), Conn: conn, Send: make(chan *message.Message, 16) }
 		currentRoom.Register(&cli)
+		defer currentRoom.Unregister(&cli)
 		cli.Run()
 	})
 
