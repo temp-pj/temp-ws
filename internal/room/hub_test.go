@@ -16,16 +16,16 @@ func TestTwoClientsInRoom(t *testing.T) {
 	cli2 := client.Client { ID: "t2", Send: make(chan *message.Message, 3) }
 
 	room.Register(&cli1)
-	<-cli1.Send
+	receiveWithTimeout(t, cli1.Send)
 	room.Register(&cli2)
-	<-cli1.Send
-	<-cli2.Send
+	receiveWithTimeout(t, cli1.Send)
+	receiveWithTimeout(t, cli2.Send)
 
-	msg := message.New("Test", nil)
+	msg, _ := message.New("Test", nil)
 	room.Broadcast(msg)
 
-	if <-cli1.Send != msg { t.Error("cli1 브로드캐스트 안됨") }
-	if <-cli2.Send != msg { t.Error("cli2 브로드캐스트 안됨") }
+	if receiveWithTimeout(t, cli1.Send) != msg { t.Error("cli1 브로드캐스트 안됨") }
+	if receiveWithTimeout(t, cli2.Send) != msg { t.Error("cli2 브로드캐스트 안됨") }
 }
 
 func TestTwoClientsInDifferentRoom(t *testing.T) {
@@ -37,14 +37,14 @@ func TestTwoClientsInDifferentRoom(t *testing.T) {
 	cli2 := client.Client { ID: "t2", Send: make(chan *message.Message, 3) }
 
 	room1.Register(&cli1)
-	<-cli1.Send
+	receiveWithTimeout(t, cli1.Send)
 	room2.Register(&cli2)
-	<-cli2.Send
+	receiveWithTimeout(t, cli2.Send)
 
-	msg := message.New("Test", nil)
+	msg, _ := message.New("Test", nil)
 	room1.Broadcast(msg)
 
-	if <-cli1.Send != msg { t.Error("cli1 브로드캐스트 안됨") }
+	if receiveWithTimeout(t, cli1.Send) != msg { t.Error("cli1 브로드캐스트 안됨") }
 
     select {
 		case <-cli2.Send:
