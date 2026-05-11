@@ -5,75 +5,64 @@ import (
 	"temp-ws/internal/client"
 	"temp-ws/internal/message"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 func TestRegister(t *testing.T) {
-	uuid := uuid.NewString()
-	room := NewRoom(uuid)
+	id := uuid.NewString()
+	room := NewRoom(id)
 	go room.Run()
-	client := &client.Client { Send: make(chan *message.Message) }
+	cli := &client.Client{Send: make(chan *message.Message, 3)}
 
-	room.register <- client
+	room.register <- cli
 
-	msg := message.Message { Type: "TEST", Payload: json.RawMessage([]byte(`{ "title": "test" }`)), Timestamp: 0 }
-	room.broadcast <- &msg
-
-	received := <- client.Send
-
-	if received != &msg {
-		t.Error("클라이언트 추가 안됨")
+	msg := receiveWithTimeout(t, cli.Send)
+	if msg == nil {
+		t.Error("방 참여 메시지 못 받음")
 	}
 }
 
 func TestUnRegister(t *testing.T) {
-	uuid := uuid.NewString()
-	room := NewRoom(uuid)
+	id := uuid.NewString()
+	room := NewRoom(id)
 	go room.Run()
-	client := &client.Client { Send: make(chan *message.Message) }
+	cli := &client.Client{Send: make(chan *message.Message, 3)}
 
-	room.register <- client
+	room.register <- cli
+	receiveWithTimeout(t, cli.Send)
 
-	room.unregister <- client
-	
-	msg := message.Message { Type: "TEST", Payload: json.RawMessage([]byte(`{ "title": "test" }`)), Timestamp: 0 }
-	room.broadcast <- &msg
-
-	select {
-		case <-client.Send:
-			t.Error("삭제된 클라이언트가 메시지를 받음")
-		case <-time.After(50 * time.Millisecond):
-			
+	room.unregister <- cli
+	_, ok := <-cli.Send
+	if ok {
+		t.Error("Send 채널이 닫히지 않음")
 	}
 }
 
 func TestBroadcast(t *testing.T) {
-	uuid := uuid.NewString()
-	room := NewRoom(uuid)
+	id := uuid.NewString()
+	room := NewRoom(id)
 	go room.Run()
 
-	firstClient := &client.Client { Send: make(chan *message.Message, 3) }
-	secondClient := &client.Client { Send: make(chan *message.Message, 3) }
-	thirdClient := &client.Client { Send: make(chan *message.Message, 3) }
+	firstClient := &client.Client{Send: make(chan *message.Message, 3)}
+	secondClient := &client.Client{Send: make(chan *message.Message, 3)}
+	thirdClient := &client.Client{Send: make(chan *message.Message, 3)}
 
 	room.register <- firstClient
+	receiveWithTimeout(t, firstClient.Send)
 	room.register <- secondClient
+	receiveWithTimeout(t, firstClient.Send)
+	receiveWithTimeout(t, secondClient.Send)
 	room.register <- thirdClient
+	receiveWithTimeout(t, firstClient.Send)
+	receiveWithTimeout(t, secondClient.Send)
+	receiveWithTimeout(t, thirdClient.Send)
 
-	msg := message.Message { Type: "TEST", Payload: json.RawMessage([]byte(`{ "title": "test" }`)), Timestamp: 0 }
+	msg := message.Message{Type: "TEST", Payload: json.RawMessage([]byte(`{"title":"test"}`)), Timestamp: 0}
 
 	room.broadcast <- &msg
 
-	
-
-	received := <- firstClient.Send
-	if received != &msg { t.Error("브로드캐스트 안됨") }
-	
-	received = <- secondClient.Send
-	if received != &msg { t.Error("브로드캐스트 안됨") }
-
-	received = <- thirdClient.Send
-	if received != &msg { t.Error("브로드캐스트 안됨") }
+	if receiveWithTimeout(t, firstClient.Send) != &msg { t.Error("브로드캐스트 안됨") }
+	if receiveWithTimeout(t, secondClient.Send) != &msg { t.Error("브로드캐스트 안됨") }
+	if receiveWithTimeout(t, thirdClient.Send) != &msg { t.Error("브로드캐스트 안됨") }
 }

@@ -15,7 +15,7 @@ func NewHub() *Hub {
 	return &Hub { rooms: make(map[string]*Room) }
 }
 
-func (h *Hub) CreateRoom() string {
+func (h *Hub) CreateRoom() (*Room, string) {
 	roomID := uuid.NewString()
 	newRoom := NewRoom(roomID)
 
@@ -25,7 +25,7 @@ func (h *Hub) CreateRoom() string {
 
 	go newRoom.Run()
 
-	return roomID
+	return newRoom, roomID
 }
 
 func (h *Hub) FindRoom(roomID string) *Room {
