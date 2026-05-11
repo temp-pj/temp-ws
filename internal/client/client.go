@@ -19,8 +19,11 @@ func (c *Client) Run() {
 
 	go func() {
 		for msg := range c.Send {
-			data, _ := json.Marshal(msg)
-			_ = c.Conn.Write(ctx, websocket.MessageText, data)
+			data, err := json.Marshal(msg)
+			if err != nil { continue }
+			if err := c.Conn.Write(ctx, websocket.MessageText, data); err != nil {
+				return
+			}
 		}
 	}()
 
