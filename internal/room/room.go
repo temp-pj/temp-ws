@@ -6,6 +6,11 @@ import (
 	"temp-ws/internal/message"
 )
 
+type MusicFetcher interface {
+	Fetch(category music.Category) ([]music.Song, error)
+}
+
+
 type Room struct {
 	clients map[* client.Client]bool
 	register chan *client.Client
