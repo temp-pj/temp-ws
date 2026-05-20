@@ -13,7 +13,11 @@ type Game struct {
 }
 
 func (g *Game) Scores()map[string]int {
-	return g.scores
+	copied := make(map[string]int, len(g.scores))
+    for k, v := range g.scores {
+        copied[k] = v
+    }
+    return copied
 }
 
 func (g *Game) CurrentRound()int {
