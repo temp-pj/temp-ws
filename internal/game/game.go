@@ -38,7 +38,10 @@ func (g *Game) StartRound(onTimeout func()) {
 }
 
 func (g *Game) EndRound(winnerID string) {
-	g.roundTimer.Stop()
+	if g.roundTimer != nil {
+		g.roundTimer.Stop()
+	}
+
 	g.rounds[g.currentRound].State = Result
 	g.rounds[g.currentRound].Winner = winnerID
 	
