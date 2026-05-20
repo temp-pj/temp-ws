@@ -16,6 +16,7 @@ type Room struct {
 	register chan *client.Client
 	unregister chan *client.Client
 	broadcast chan *message.Message
+	incoming chan *message.ClientMessage
 	roomID string
 	roomState RoomState
 	quit chan struct{}
@@ -71,6 +72,12 @@ func (r *Room) Run() {
 
 					}
 				}
+
+			case clientMessage := <- r.incoming:
+					actions, cleanup := r.HandleClientMessage(clientMessage)
+					r.executeActions(actions)
+
+					if cleanup != nil { cleanup() }
 			case <- r.quit: return 
 			
 
