@@ -178,7 +178,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				}
 			})
 			
-			roundStartPayload := message.RoundStartPayload { Round: r.game.CurrentRoundData() }
+			roundStartPayload := message.RoundStartPayload { LetterCards: r.game.CurrentRoundData().LetterCards }
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
 
 			return []Action { { Type: Broadcast, Message: roundStartMsg } }, nil
@@ -199,13 +199,17 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			kickPlayerMsg, _ := message.New("KICKED", nil)
 		
 			return []Action { { Type: Unicast, Target: target, Message: kickPlayerMsg } }, func() { 
-				close(r.clients[target].Send)
-				delete(r.clients, target)
+				if c, ok := r.clients[target]; ok {
+					close(c.Send)
+					delete(r.clients, c.ID)
+				}
+
 				delete(r.ready, target)
 			 }
 		
 		case "SUBMIT_ANSWER":
 			if r.game == nil { return nil, nil }
+			if r.game.CurrentRoundData().State != game.Playing { return nil, nil }
 
 			var payload message.SubmitAnswerPayload
 			err := json.Unmarshal(msg.Message.Payload, &payload)
@@ -251,7 +255,9 @@ func (r *Room) endRoundActions(winner string) ([]Action, func()) {
     })
 
 	r.roomState = Finished
+
     return []Action{
+		{Type: Broadcast, Message: roundResultMsg},
         {Type: Broadcast, Message: gameOverMsg},
     }, func() { r.game = nil }
 }
