@@ -1,7 +1,6 @@
 package message
 
 import (
-	"temp-ws/internal/game"
 	"temp-ws/internal/music"
 )
 
@@ -30,7 +29,7 @@ type PreloadSongPayload struct {
 }
 
 type RoundStartPayload struct {
-	Round game.Round	`json:"round"`
+	LetterCards []string	`json:"letterCards"`
 	TimeLimit int		`json:"timeLimit"`
 }
 
