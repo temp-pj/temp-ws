@@ -95,11 +95,13 @@ func (r *Room) Broadcast(msg *message.Message) {
 }
 
 func NewRoom(roomID string) *Room {
+func NewRoom(roomID string, musicFetcher MusicFetcher) *Room {
 	return &Room {
-		clients: make(map[* client.Client]bool),
+		clients: make(map[string]*client.Client),
 		register: make(chan *client.Client),
 		unregister: make(chan *client.Client),
 		broadcast: make(chan *message.Message),
+		incoming: make(chan *message.ClientMessage),
 		roomID: roomID,
 		roomState: Waiting,
 		quit: make(chan struct{}),
