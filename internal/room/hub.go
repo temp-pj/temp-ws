@@ -17,7 +17,7 @@ func NewHub() *Hub {
 
 func (h *Hub) CreateRoom() (*Room, string) {
 	roomID := uuid.NewString()
-	newRoom := NewRoom(roomID)
+	newRoom := NewRoom(roomID, nil)
 
 	h.mu.Lock()
 	h.rooms[roomID] = newRoom

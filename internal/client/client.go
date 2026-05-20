@@ -14,7 +14,7 @@ type Client struct {
 	Send chan *message.Message
 }
 
-func (c *Client) Run() { 
+func (c *Client) Run(incoming chan <- *message.ClientMessage) { 
 	ctx := context.Background()
 
 	go func() {
@@ -28,7 +28,12 @@ func (c *Client) Run() {
 	}()
 
 	for {
-		_, _, err := c.Conn.Read(ctx)
+		_, data, err := c.Conn.Read(ctx)
         if err != nil { return }
+
+		var msg message.Message
+		if err := json.Unmarshal(data, &msg); err != nil { continue }
+
+		incoming <- &message.ClientMessage { From: c.ID, Message: &msg }
 	}
 }

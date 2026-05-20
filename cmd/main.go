@@ -36,7 +36,7 @@ func main() {
 		cli := client.Client { ID: uuid.NewString(), Conn: conn, Send: make(chan *message.Message, 16) }
 		currentRoom.Register(&cli)
 		defer currentRoom.Unregister(&cli)
-		cli.Run()
+		cli.Run(currentRoom.IncomingChannel())
 	})
 
 	fmt.Println("서버 시작: localhost:8080")
