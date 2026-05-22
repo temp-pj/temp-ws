@@ -6,6 +6,36 @@ import (
 	"unicode"
 )
 
+func TestGenerateLetterCards(t *testing.T) {
+	title := "사랑시 고백구 행복동"
+	cards := generateLetterCards(title)
+
+	answer := extractCards(title)
+	expectedTotalCount := decideTotalCardCount(len(answer))
+
+	if len(cards) != expectedTotalCount {
+		t.Error("카드 수 다름")
+	}
+
+	cardMap := map[string]int { }
+
+	for _, c := range cards {
+		cardMap[c] += 1
+	}
+
+	for _, r := range answer {
+		s := string(r)
+
+		if cardMap[s] <= 0 {
+			t.Error("정답 카드 누락")
+		}
+
+		cardMap[s] -= 1
+	}
+
+	
+}
+
 func TestExtractCard(t *testing.T) {
 	title := "어떻게 이별까지 사랑하겠어, 널 사랑하는 거지"
 	expected := []rune { '어', '떻', '게', '이', '별', '까', '지', '사', '랑', '하', '겠', '어', '널', '사', '랑', '하', '는', '거', '지'  }
