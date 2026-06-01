@@ -9,8 +9,8 @@ import (
 	"temp-ws/internal/music"
 )
 
-type MusicFetcher interface {
-	Fetch(category music.Category) ([]music.Song, error)
+type MusicProvider interface {
+	FetchSongs(ctx context.Context, category music.Category, limit int) ([]music.Song, error)
 }
 
 
@@ -28,7 +28,7 @@ type Room struct {
 	quit chan struct{}
 	closeOnce sync.Once
 	game *game.Game
-	musicFetcher MusicFetcher
+	musicProvider MusicProvider
 }
 
 func (r *Room) Run() {
@@ -291,7 +291,7 @@ func (r *Room) executeActions(actions []Action) {
 	}
 }
 
-func NewRoom(roomID string, musicFetcher MusicFetcher) *Room {
+func NewRoom(roomID string, musicProvider MusicProvider) *Room {
 	return &Room {
 		clients: make(map[string]*client.Client),
 		register: make(chan *client.Client),
@@ -303,7 +303,7 @@ func NewRoom(roomID string, musicFetcher MusicFetcher) *Room {
 		roomState: Waiting,
 		ready: make(map[string]bool),
 		quit: make(chan struct{}),
-		musicFetcher: musicFetcher,
+		musicProvider: musicProvider,
 	}
 }
 
