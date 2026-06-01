@@ -21,7 +21,7 @@ func (g *Game) Scores()map[string]int {
 }
 
 func (g *Game) CurrentRound()int {
-	return g.currentRound
+	return g.currentRound + 1
 }
 
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
@@ -30,8 +30,12 @@ func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards, TimeLimit: 30  }
 }
 
-func (g *Game) CurrentSong()music.Song {
-	return g.rounds[g.currentRound].Song
+func (g *Game) CurrentISRC()string {
+	return g.rounds[g.currentRound].Song.ISRC
+}
+
+func (g *Game) IsPlaying()bool {
+	return g.rounds[g.currentRound].State == Playing
 }
 
 func (g *Game) StartRound(onTimeout func()) {
@@ -64,7 +68,9 @@ func (g *Game) SubmitAnswer(answer string)bool {
 }
 
 func (g *Game) StopTimer() {
-	g.roundTimer.Stop()
+	if g.roundTimer != nil {
+		g.roundTimer.Stop()
+	}
 }
 
 func NewGame(playerIDs []string, songs []music.Song) *Game {
@@ -77,7 +83,7 @@ func NewGame(playerIDs []string, songs []music.Song) *Game {
 	rounds := make([]Round, len(songs))
 
 	for i, song := range songs {
-		rounds[i] = Round { 
+		rounds[i] = Round {
 			Answer: song.Title, 
 			LetterCards: generateLetterCards(song.Title),
 			Song: song,
