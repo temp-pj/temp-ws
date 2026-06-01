@@ -32,6 +32,8 @@ func main() {
 
 	total := 0
 
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+
 	for {
 		var mbids []string
 
@@ -70,14 +72,22 @@ func main() {
 
 		if err != nil { log.Fatal(err) }
 		
-		resp, err := http.Post(
+		resp, err := httpClient.Post(
 			"https://api.listenbrainz.org/1/popularity/recording",
 			"application/json",
 			bytes.NewReader(jsonBody),
 		)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("요청 실패, 재시도: %v", err)
+			continue 
+		}
+
+		if resp.StatusCode != 200 {
+			_ = resp.Body.Close()
+			log.Printf("상태 코드 %d, 재시도", resp.StatusCode)
+			time.Sleep(1 * time.Second)
+			continue
 		}
 
 		var results []struct {
@@ -87,7 +97,9 @@ func main() {
 		}
 		
 		if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
-			log.Fatal(err)
+			_ = resp.Body.Close()
+			log.Printf("디코딩 실패, 재시도: %v", err)
+			continue
 		}
 
 		_ = resp.Body.Close()
