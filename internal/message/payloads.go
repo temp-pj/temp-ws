@@ -14,6 +14,11 @@ type PlayerLeftPayload struct {
 
 type StartGamePayload struct {
 	Category music.Category
+	TrackCount int
+}
+
+type ReadyToPlayPayload struct {
+    RoundNumber int
 }
 
 type KickPlayerPayload struct {
@@ -25,12 +30,14 @@ type SubmitAnswerPayload struct {
 }
 
 type PreloadSongPayload struct {
-	URL string `json:"url"`
+	ISRC string		`json:"isrc"`
 }
 
 type RoundStartPayload struct {
+	RoundNumber int 		`json:"roundNumber"`
+	TotalRound int			`json:"totalRound"`
 	LetterCards []string	`json:"letterCards"`
-	TimeLimit int		`json:"timeLimit"`
+	TimeLimit int			`json:"timeLimit"`
 }
 
 type RoundResultPayload struct {
@@ -39,6 +46,7 @@ type RoundResultPayload struct {
 }
 
 type WrongAnswerPayload struct {
+	PlayerID string			`json:"playerID"`
 	WrongAnswer string		`json:"wrongAnswer"`
 }
 
