@@ -24,8 +24,10 @@ func (g *Game) CurrentRound()int {
 	return g.currentRound
 }
 
-func (g *Game) CurrentRoundData()Round {
-	return g.rounds[g.currentRound]
+func (g *Game) GetRoundStartInfo() RoundStartInfo {
+	 r := g.rounds[g.currentRound]
+
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards, TimeLimit: 30  }
 }
 
 func (g *Game) CurrentSong()music.Song {
