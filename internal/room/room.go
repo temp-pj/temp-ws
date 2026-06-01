@@ -1,6 +1,7 @@
 package room
 
 import (
+	"context"
 	"encoding/json"
 	"sync"
 	"temp-ws/internal/client"
@@ -91,10 +92,7 @@ func (r *Room) Run() {
 				r.executeActions(actions)
 				if cleanup != nil { cleanup() }
 
-			
 			case <- r.quit: return 
-			
-
 		}
 	}
 }
@@ -133,15 +131,17 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			}
 			
 			category := payload.Category
+			trackCount := payload.TrackCount
 			
 			go func() {
-				songs, _ := r.musicFetcher.Fetch(category)
+				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount)
+				
+				if err != nil || len(songs) == 0 { return }
 				
 				r.internal <- func() ([]Action, func()) {
 					r.game = game.NewGame(playerIDs, songs)
-					url := r.game.CurrentSong().WrappedURL()
-
-					preloadSongPayload := message.PreloadSongPayload { URL: url }
+					isrc := r.game.CurrentISRC()
+					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc }
 					preloadSongMsg, _ := message.New("PRELOAD_SONG", preloadSongPayload)
 
 					return []Action {
@@ -158,6 +158,13 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 		case "READY_TO_PLAY":
 			if r.game == nil { return nil, nil }
 
+			var payload message.ReadyToPlayPayload
+			err := json.Unmarshal(msg.Message.Payload, &payload)
+
+			if err != nil { return nil, nil }
+
+			if payload.RoundNumber != r.game.CurrentRound() { return nil, nil }
+
 			r.ready[msg.From] = true
 			allReady := true
 
@@ -172,13 +179,27 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 
 			r.ready = make(map[string]bool)
 
+			currentRound := r.game.CurrentRound()
+
 			r.game.StartRound(func() {
 				r.internal <- func() ([]Action, func()) {
+					if r.game.CurrentRound() != currentRound {
+						return nil, nil
+					}
+
 					return r.endRoundActions("")
 				}
 			})
 			
-			roundStartPayload := message.RoundStartPayload { LetterCards: r.game.CurrentRoundData().LetterCards }
+			roundStartInfo := r.game.GetRoundStartInfo()
+
+			roundStartPayload := message.RoundStartPayload { 
+				RoundNumber: roundStartInfo.RoundNumber, 
+				TotalRound: roundStartInfo.TotalRounds, 
+				LetterCards: roundStartInfo.LetterCards, 
+				TimeLimit: roundStartInfo.TimeLimit, 
+			}
+
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
 
 			return []Action { { Type: Broadcast, Message: roundStartMsg } }, nil
@@ -209,7 +230,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 		
 		case "SUBMIT_ANSWER":
 			if r.game == nil { return nil, nil }
-			if r.game.CurrentRoundData().State != game.Playing { return nil, nil }
+			if !r.game.IsPlaying() { return nil, nil }
 
 			var payload message.SubmitAnswerPayload
 			err := json.Unmarshal(msg.Message.Payload, &payload)
@@ -223,7 +244,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				wrongAnswerMsg, _ := message.New("WRONG_ANSWER", wrongAnswerPayload)
 
 				return []Action{
-					{Type: Unicast, Target: msg.From, Message: wrongAnswerMsg },
+					{Type: Broadcast, Message: wrongAnswerMsg },
 				}, nil
 			}
 
@@ -241,9 +262,11 @@ func (r *Room) endRoundActions(winner string) ([]Action, func()) {
     })
 
     if r.game.NextRound() {
+		isrc := r.game.CurrentISRC()
         preloadMsg, _ := message.New("PRELOAD_SONG", message.PreloadSongPayload{
-            URL: r.game.CurrentSong().WrappedURL(),
+            ISRC: isrc,
         })
+
         return []Action{
             {Type: Broadcast, Message: roundResultMsg},
             {Type: Broadcast, Message: preloadMsg},
