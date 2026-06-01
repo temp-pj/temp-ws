@@ -8,16 +8,17 @@ import (
 
 type Hub struct {
 	rooms map[string]*Room
+	musicProvider MusicProvider
 	mu sync.RWMutex
 }
 
-func NewHub() *Hub {
-	return &Hub { rooms: make(map[string]*Room) }
+func NewHub(mp MusicProvider) *Hub {
+	return &Hub { rooms: make(map[string]*Room), musicProvider: mp }
 }
 
 func (h *Hub) CreateRoom() (*Room, string) {
 	roomID := uuid.NewString()
-	newRoom := NewRoom(roomID, nil)
+	newRoom := NewRoom(roomID, h.musicProvider)
 
 	h.mu.Lock()
 	h.rooms[roomID] = newRoom

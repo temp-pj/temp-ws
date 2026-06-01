@@ -15,10 +15,10 @@ func TestFullGameCycle(t *testing.T) {
 
 	playerID := []string { player1, player2, player3 }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "꿈과 책과 힘과 벽", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
+		{ Title: "꿈과 책과 힘과 벽", Artist: "잔나비", }, 
  }
 	game := NewGame(playerID, songs)
 
@@ -88,9 +88,9 @@ func TestFullGameCycle(t *testing.T) {
 func TestNewGame(t *testing.T) {
 	playerID := []string { uuid.NewString(), uuid.NewString(), uuid.NewString()  }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  }
 	game := NewGame(playerID, songs)
 
@@ -102,21 +102,22 @@ func TestNewGame(t *testing.T) {
 			t.Errorf("플레이어 %s 초기 점수가 0이 아님: %d", id, scores[id])
 		}
 	}
-	if round != 0 { t.Error("게임 생성 시 round 값 이상") }
+	if round != 1 { t.Error("게임 생성 시 round 값 이상") }
 }
 
 func TestStartRound(t *testing.T) {
 	playerID := []string { uuid.NewString(), uuid.NewString(), uuid.NewString()  }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
 	game := NewGame(playerID, songs)
 
 	game.StartRound(func() { })
+	round := game.rounds[game.currentRound]
 
-	if game.CurrentRoundData().State != Playing {
+	if round.State != Playing {
 		t.Error("Round 상태 이상")
 	}
 
@@ -126,9 +127,9 @@ func TestStartRound(t *testing.T) {
 func TestEndRound_WithWinner(t *testing.T) {
 	playerID := []string { uuid.NewString(), uuid.NewString(), uuid.NewString()  }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
 	game := NewGame(playerID, songs)
 
@@ -142,27 +143,27 @@ func TestEndRound_WithWinner(t *testing.T) {
 
 	game.EndRound(playerID[0])
 	scores := game.Scores()
+	round := game.rounds[game.currentRound]
 
 	if scores[playerID[0]] != 1 { 
 		t.Error("정답을 맞춘 플레이어 점수 반영 안됨")
 	 }
 
-	if game.CurrentRoundData().State != Result {
+	if round.State != Result {
 		t.Error("라운드 상태 변경 안됨")
 	}
 
-	if game.CurrentRoundData().Winner != playerID[0] {
+	if round.Winner != playerID[0] {
 		t.Error("정답자 아이디 반영 안됨")
 	}
-
 }
 
 func TestNextRound_Timeout(t *testing.T) {
 	playerID := []string { uuid.NewString(), uuid.NewString(), uuid.NewString()  }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
 	game := NewGame(playerID, songs)
 
@@ -177,11 +178,13 @@ func TestNextRound_Timeout(t *testing.T) {
 		}
 	}
 
-	if game.CurrentRoundData().State != Result {
+	round := game.rounds[game.currentRound]
+
+	if round.State != Result {
 		t.Error("라운드 상태 변경 안됨")
 	}
 
-	if game.CurrentRoundData().Winner != "" {
+	if round.Winner != "" {
 		t.Error("정답자 없음 표기 안됨")
 	}
 }
@@ -189,9 +192,9 @@ func TestNextRound_Timeout(t *testing.T) {
 func TestSubmitAnswer(t *testing.T) {
 	playerID := []string { uuid.NewString(), uuid.NewString(), uuid.NewString()  }
 	songs := []music.Song { 
-		{ Title: "외딴섬 로맨틱", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "초록을거머쥔우리는", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
-		{ Title: "주저하는연인들을위해", Artist: "잔나비", PreviewURL: "www.naver.com", WrappedID: "www.daum.net" }, 
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비", }, 
+		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
+		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
 	game := NewGame(playerID, songs)
 

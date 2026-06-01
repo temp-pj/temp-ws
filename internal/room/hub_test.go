@@ -1,15 +1,25 @@
 package room
 
 import (
+	"context"
 	"sync"
 	"temp-ws/internal/client"
 	"temp-ws/internal/message"
+	"temp-ws/internal/music"
 	"testing"
 	"time"
 )
 
+type mockMusicProvider struct{}
+
+func (m *mockMusicProvider) FetchSongs(ctx context.Context, category music.Category, limit int) ([]music.Song, error) {
+    return []music.Song{
+        {Title: "테스트곡", Artist: "테스트", ISRC: "TEST001"},
+    }, nil
+}
+
 func TestTwoClientsInRoom(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
 	room, _ := hub.CreateRoom()
 
 	cli1 := client.Client { ID: "t1", Send: make(chan *message.Message, 3) }
@@ -29,7 +39,7 @@ func TestTwoClientsInRoom(t *testing.T) {
 }
 
 func TestTwoClientsInDifferentRoom(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
 	room1, _ := hub.CreateRoom()
 	room2, _ := hub.CreateRoom()
 
@@ -56,7 +66,7 @@ func TestTwoClientsInDifferentRoom(t *testing.T) {
 }
 
 func TestCreateRoom(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
 
 	room, _ := hub.CreateRoom()
 
@@ -66,7 +76,7 @@ func TestCreateRoom(t *testing.T) {
 }
 
 func TestDeleteRoom(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
 	_, roomID := hub.CreateRoom()
 
 	hub.DeleteRoom(roomID)
@@ -79,7 +89,7 @@ func TestDeleteRoom(t *testing.T) {
 }
 
 func TestFindRoom_NotFound(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
 
 	room := hub.FindRoom("testroomid")
 
@@ -89,7 +99,7 @@ func TestFindRoom_NotFound(t *testing.T) {
 }
 
 func TestConcurrentAccess(t *testing.T) {
-	hub := NewHub()
+	hub := NewHub(&mockMusicProvider{})
     var wg sync.WaitGroup
 
     for i := 0; i < 10; i++ {
