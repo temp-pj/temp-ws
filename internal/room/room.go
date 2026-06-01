@@ -132,6 +132,8 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			
 			category := payload.Category
 			trackCount := payload.TrackCount
+
+			if trackCount <= 0 { trackCount = 50 }
 			
 			go func() {
 				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount)
@@ -240,7 +242,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			correct := r.game.SubmitAnswer(answer)
 
 			if !correct {
-				wrongAnswerPayload := message.WrongAnswerPayload { WrongAnswer: answer }
+				wrongAnswerPayload := message.WrongAnswerPayload { PlayerID: msg.From, WrongAnswer: answer }
 				wrongAnswerMsg, _ := message.New("WRONG_ANSWER", wrongAnswerPayload)
 
 				return []Action{
