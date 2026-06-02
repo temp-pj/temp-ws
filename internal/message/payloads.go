@@ -23,7 +23,7 @@ type ReadyToPlayPayload struct {
 }
 
 type CountDownPayload struct {
-	Remaining int
+	Remaining int	`json:"remaining"`
 }
 
 type KickPlayerPayload struct {
