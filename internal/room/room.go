@@ -8,6 +8,7 @@ import (
 	"temp-ws/internal/game"
 	"temp-ws/internal/message"
 	"temp-ws/internal/music"
+	"time"
 )
 
 type MusicProvider interface {
@@ -24,7 +25,7 @@ type Room struct {
 	internal chan func() ([]Action, func())
 	roomID string
 	hostID string
-	roomState RoomState
+	state RoomState
 	ready map[string]bool
 	quit chan struct{}
 	closeOnce sync.Once
@@ -33,6 +34,10 @@ type Room struct {
 }
 
 func (r *Room) Run() {
+	ticker := time.NewTicker(1 * time.Second)
+
+	defer ticker.Stop()
+
 	for {
 		select {
 			case client := <- r.register:
@@ -92,6 +97,24 @@ func (r *Room) Run() {
 				r.executeActions(actions)
 				if cleanup != nil { cleanup() }
 
+
+			case <- ticker.C:
+				if r.game == nil { continue }
+				if !r.game.IsPlaying() { continue }
+
+				remaining := r.game.RemainingTime()
+				msg, err := message.New("COUNTDOWN", message.CountDownPayload { Remaining: remaining })
+				if err != nil { continue }
+
+				for _, c := range r.clients {
+					select {
+					case c.Send <- msg:
+					default:
+						delete(r.clients, c.ID)
+						close(c.Send)
+					}
+				}
+
 			case <- r.quit: return 
 		}
 	}
@@ -134,6 +157,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			trackCount := payload.TrackCount
 
 			if trackCount <= 0 { trackCount = 50 }
+			if payload.TimeLimit <= 0 { payload.TimeLimit = 30 }
 			
 			go func() {
 				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount)
@@ -141,7 +165,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				if err != nil || len(songs) == 0 { return }
 				
 				r.internal <- func() ([]Action, func()) {
-					r.game = game.NewGame(playerIDs, songs)
+					r.game = game.NewGame(playerIDs, songs, payload.TimeLimit)
 					isrc := r.game.CurrentISRC()
 					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc }
 					preloadSongMsg, _ := message.New("PRELOAD_SONG", preloadSongPayload)
@@ -152,7 +176,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				}
 			}()
 			
-			r.roomState = Playing
+			r.state = Playing
 			gameStartedMsg, _ := message.New("GAME_STARTED", nil)
 
 			return []Action{ {Type: Broadcast, Message: gameStartedMsg }, }, nil
@@ -198,8 +222,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			roundStartPayload := message.RoundStartPayload { 
 				RoundNumber: roundStartInfo.RoundNumber, 
 				TotalRound: roundStartInfo.TotalRounds, 
-				LetterCards: roundStartInfo.LetterCards, 
-				TimeLimit: roundStartInfo.TimeLimit, 
+				LetterCards: roundStartInfo.LetterCards,
 			}
 
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
@@ -279,7 +302,7 @@ func (r *Room) endRoundActions(winner string) ([]Action, func()) {
         Score: r.game.Scores(),
     })
 
-	r.roomState = Finished
+	r.state = Finished
 
     return []Action{
 		{Type: Broadcast, Message: roundResultMsg},
@@ -311,9 +334,12 @@ func (r *Room) executeActions(actions []Action) {
 					}
 					
 				}
-
 		}
 	}
+}
+
+func (r *Room) IsPlaying()bool {
+	return r.state == Playing
 }
 
 func NewRoom(roomID string, musicProvider MusicProvider) *Room {
@@ -325,7 +351,7 @@ func NewRoom(roomID string, musicProvider MusicProvider) *Room {
 		incoming: make(chan *message.ClientMessage),
 		internal: make(chan func()([]Action, func())),
 		roomID: roomID,
-		roomState: Waiting,
+		state: Waiting,
 		ready: make(map[string]bool),
 		quit: make(chan struct{}),
 		musicProvider: musicProvider,
