@@ -157,6 +157,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			trackCount := payload.TrackCount
 
 			if trackCount <= 0 { trackCount = 50 }
+			if payload.TimeLimit <= 0 { payload.TimeLimit = 30 }
 			
 			go func() {
 				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount)
