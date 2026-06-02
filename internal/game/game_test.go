@@ -3,6 +3,7 @@ package game
 import (
 	"temp-ws/internal/music"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +21,7 @@ func TestFullGameCycle(t *testing.T) {
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
 		{ Title: "꿈과 책과 힘과 벽", Artist: "잔나비", }, 
  }
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	game.StartRound(func() { })
 
@@ -92,7 +93,7 @@ func TestNewGame(t *testing.T) {
 		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  }
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	scores := game.Scores()
 	round := game.CurrentRound()
@@ -112,7 +113,7 @@ func TestStartRound(t *testing.T) {
 		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	game.StartRound(func() { })
 	round := game.rounds[game.currentRound]
@@ -131,7 +132,7 @@ func TestEndRound_WithWinner(t *testing.T) {
 		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	game.StartRound(func() { })
 
@@ -165,7 +166,7 @@ func TestNextRound_Timeout(t *testing.T) {
 		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	game.StartRound(func() { })
 
@@ -196,7 +197,7 @@ func TestSubmitAnswer(t *testing.T) {
 		{ Title: "초록을거머쥔우리는", Artist: "잔나비", }, 
 		{ Title: "주저하는연인들을위해", Artist: "잔나비", }, 
  	}
-	game := NewGame(playerID, songs)
+	game := NewGame(playerID, songs, 30)
 
 	game.StartRound(func() { })
 
@@ -213,3 +214,59 @@ func TestSubmitAnswer(t *testing.T) {
 	}
 }
 
+func TestRemainingTime(t *testing.T) {
+	playerID := []string { uuid.NewString() }
+	songs := []music.Song {
+		{ Title: "외딴섬 로맨틱", Artist: "잔나비" },
+	}
+
+	game := NewGame(playerID, songs, 30)
+
+	game.StartRound(func() { })
+
+	defer game.StopTimer()
+
+	remaining := game.RemainingTime()
+
+	if remaining < 28 || remaining > 30 {
+		t.Errorf("StartRound 직후 RemainingTime이 ~30이어야 하는데 %d 반환", remaining)
+	}
+}
+
+func TestRemainingTime_AfterDelay(t *testing.T) {
+	playerID := []string{uuid.NewString()}
+	songs := []music.Song{
+		{Title: "외딴섬 로맨틱", Artist: "잔나비"},
+	}
+	game := NewGame(playerID, songs, 5)
+
+	game.StartRound(func() {})
+	defer game.StopTimer()
+
+	time.Sleep(2 * time.Second)
+
+	remaining := game.RemainingTime()
+
+	if remaining < 2 || remaining > 3 {
+		t.Errorf("2초 경과 후 RemainingTime이 ~3이어야 하는데 %d 반환", remaining)
+	}
+}
+
+func TestRemainingTime_Expired(t *testing.T) {
+	playerID := []string{uuid.NewString()}
+	songs := []music.Song{
+		{Title: "외딴섬 로맨틱", Artist: "잔나비"},
+	}
+	game := NewGame(playerID, songs, 1)
+
+	game.StartRound(func() {})
+	defer game.StopTimer()
+
+	time.Sleep(2 * time.Second)
+
+	remaining := game.RemainingTime()
+
+	if remaining != 0 {
+		t.Errorf("만료 후 RemainingTime이 0이어야 하는데 %d 반환", remaining)
+	}
+}
