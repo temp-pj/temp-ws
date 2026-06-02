@@ -9,6 +9,8 @@ type Game struct {
 	rounds []Round
 	currentRound int
 	scores map[string]int
+	roundDuration time.Duration
+	roundStartedAt time.Time
 	roundTimer *time.Timer
 }
 
@@ -27,7 +29,7 @@ func (g *Game) CurrentRound()int {
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 r := g.rounds[g.currentRound]
 
-	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards, TimeLimit: 30  }
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards  }
 }
 
 func (g *Game) CurrentISRC()string {
@@ -40,7 +42,8 @@ func (g *Game) IsPlaying()bool {
 
 func (g *Game) StartRound(onTimeout func()) {
 	g.rounds[g.currentRound].State = Playing
-	g.roundTimer = time.AfterFunc(30 * time.Second, onTimeout)
+	g.roundStartedAt = time.Now()
+	g.roundTimer = time.AfterFunc(g.roundDuration, onTimeout)
 }
 
 func (g *Game) EndRound(winnerID string) {
@@ -67,13 +70,22 @@ func (g *Game) SubmitAnswer(answer string)bool {
 	return answer == g.rounds[g.currentRound].Answer
 }
 
+func (g *Game) RemainingTime()int {
+	elapsed := time.Since(g.roundStartedAt)
+	remainingTime := g.roundDuration - elapsed
+
+	if remainingTime <= 0 { return 0 }
+
+	return int(remainingTime.Seconds())
+}
+
 func (g *Game) StopTimer() {
 	if g.roundTimer != nil {
 		g.roundTimer.Stop()
 	}
 }
 
-func NewGame(playerIDs []string, songs []music.Song) *Game {
+func NewGame(playerIDs []string, songs []music.Song, timeLimit int) *Game {
 	scores := make(map[string]int)
 
 	for _, id := range playerIDs {
@@ -91,5 +103,7 @@ func NewGame(playerIDs []string, songs []music.Song) *Game {
 		}
 	}
 
-	return &Game { rounds: rounds, currentRound: 0, scores: scores }
+	roundDuration := time.Duration(timeLimit) * time.Second
+
+	return &Game { rounds: rounds, currentRound: 0, scores: scores, roundDuration: roundDuration }
 }
