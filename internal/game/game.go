@@ -1,6 +1,7 @@
 package game
 
 import (
+	"math"
 	"temp-ws/internal/music"
 	"time"
 )
@@ -76,7 +77,7 @@ func (g *Game) RemainingTime()int {
 
 	if remainingTime <= 0 { return 0 }
 
-	return int(remainingTime.Seconds())
+	return int(math.Ceil(remainingTime.Seconds()))
 }
 
 func (g *Game) StopTimer() {
