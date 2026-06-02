@@ -21,6 +21,10 @@ type ReadyToPlayPayload struct {
     RoundNumber int
 }
 
+type CountDownPayload struct {
+	Remaining int
+}
+
 type KickPlayerPayload struct {
 	TargetPlayerID string
 }
