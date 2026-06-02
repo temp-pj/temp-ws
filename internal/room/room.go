@@ -100,7 +100,7 @@ func (r *Room) Run() {
 
 			case <- ticker.C:
 				if r.game == nil { continue }
-				if !r.IsPlaying() { continue }
+				if !r.game.IsPlaying() { continue }
 
 				remaining := r.game.RemainingTime()
 				msg, err := message.New("COUNTDOWN", message.CountDownPayload { Remaining: remaining })
