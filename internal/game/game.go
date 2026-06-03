@@ -30,7 +30,7 @@ func (g *Game) CurrentRound()int {
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 r := g.rounds[g.currentRound]
 
-	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards  }
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards, StartTime: r.StartTime  }
 }
 
 func (g *Game) CurrentISRC()string {
@@ -101,6 +101,7 @@ func NewGame(playerIDs []string, songs []music.Song, timeLimit int) *Game {
 			LetterCards: generateLetterCards(song.Title),
 			Song: song,
 			State: Idle,
+			StartTime: generateStartTime(song.Duration, timeLimit),
 		}
 	}
 
