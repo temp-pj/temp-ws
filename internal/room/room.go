@@ -167,7 +167,8 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				r.internal <- func() ([]Action, func()) {
 					r.game = game.NewGame(playerIDs, songs, payload.TimeLimit)
 					isrc := r.game.CurrentISRC()
-					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc }
+					startTime := r.game.CurrentStartTime()
+					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc, StartTime: startTime }
 					preloadSongMsg, _ := message.New("PRELOAD_SONG", preloadSongPayload)
 
 					return []Action {
@@ -223,7 +224,6 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				RoundNumber: roundStartInfo.RoundNumber, 
 				TotalRound: roundStartInfo.TotalRounds, 
 				LetterCards: roundStartInfo.LetterCards,
-				StartTime: roundStartInfo.StartTime,
 			}
 
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
