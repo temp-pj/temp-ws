@@ -9,4 +9,5 @@ type Song struct {
 	ISRC string				`json:"isrc"`
 	Artist string			`json:"artist"`
 	ReleaseDate time.Time	`json:"release_date"`
+	Duration int			`json:"duration"`
 }

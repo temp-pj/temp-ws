@@ -42,6 +42,7 @@ type RoundStartPayload struct {
 	RoundNumber int 		`json:"roundNumber"`
 	TotalRound int			`json:"totalRound"`
 	LetterCards []string	`json:"letterCards"`
+	StartTime int			`json:"startTime"`
 }
 
 type RoundResultPayload struct {

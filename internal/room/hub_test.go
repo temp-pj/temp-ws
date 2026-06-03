@@ -12,7 +12,7 @@ import (
 
 type mockMusicProvider struct{}
 
-func (m *mockMusicProvider) FetchSongs(ctx context.Context, category music.Category, limit int) ([]music.Song, error) {
+func (m *mockMusicProvider) FetchSongs(ctx context.Context, category music.Category, count int, timeLimit int) ([]music.Song, error) {
     return []music.Song{
         {Title: "테스트곡", Artist: "테스트", ISRC: "TEST001"},
     }, nil
