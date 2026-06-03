@@ -8,5 +8,5 @@ func generateStartTime(durationMs int, timeLimitSec int)int {
 
 	if maxSec <= 0 { return 0 }
 
-	return rand.IntN(maxSec)
+	return rand.IntN(maxSec+1)
 }
