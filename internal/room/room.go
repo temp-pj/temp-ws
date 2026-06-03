@@ -12,7 +12,7 @@ import (
 )
 
 type MusicProvider interface {
-	FetchSongs(ctx context.Context, category music.Category, limit int) ([]music.Song, error)
+	FetchSongs(ctx context.Context, category music.Category, count int, timeLimit int) ([]music.Song, error)
 }
 
 
@@ -160,7 +160,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			if payload.TimeLimit <= 0 { payload.TimeLimit = 30 }
 			
 			go func() {
-				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount)
+				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount, payload.TimeLimit )
 				
 				if err != nil || len(songs) == 0 { return }
 				
@@ -223,6 +223,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				RoundNumber: roundStartInfo.RoundNumber, 
 				TotalRound: roundStartInfo.TotalRounds, 
 				LetterCards: roundStartInfo.LetterCards,
+				StartTime: roundStartInfo.StartTime,
 			}
 
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
