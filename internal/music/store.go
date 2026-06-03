@@ -14,9 +14,9 @@ func NewStore(db *sql.DB) *Store {
 	return &Store { db: db }
 }
 
-func (s *Store) FetchSongs(ctx context.Context, c Category, limit int) ([]Song, error) {
+func (s *Store) FetchSongs(ctx context.Context, c Category, count int, timeLimit int) ([]Song, error) {
 	query := `
-		SELECT r.mbid, r.name, r.isrc, a.name AS artist_name, r.release_date
+		SELECT r.mbid, r.name, r.isrc, a.name AS artist_name, r.release_date, r.duration
 		FROM recordings r
 		JOIN artists a ON r.artist_mbid = a.mbid
 		JOIN artist_tags at ON a.mbid = at.artist_mbid
@@ -27,8 +27,9 @@ func (s *Store) FetchSongs(ctx context.Context, c Category, limit int) ([]Song, 
 		  AND a.type = $5
 		  AND ($6 = '' OR a.gender = $6 OR a.gender IS NULL)
 		  AND r.listen_count >= 1000
+		  AND r.duration >= ($7 + 10) * 1000
 		ORDER BY RANDOM()
-		LIMIT $7;
+		LIMIT $8;
 	`
 
 	rows, err := s.db.QueryContext(
@@ -40,7 +41,8 @@ func (s *Store) FetchSongs(ctx context.Context, c Category, limit int) ([]Song, 
 		c.Country,
 		c.ArtistType,
 		c.Gender,
-		limit,
+		timeLimit,
+		count,
 	)
 
 	if err != nil {
@@ -61,6 +63,7 @@ func (s *Store) FetchSongs(ctx context.Context, c Category, limit int) ([]Song, 
 			&song.ISRC,
 			&song.Artist,
 			&releaseDate,
+			&song.Duration,
 		)
 
 		if err != nil {
