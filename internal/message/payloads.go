@@ -36,13 +36,13 @@ type SubmitAnswerPayload struct {
 
 type PreloadSongPayload struct {
 	ISRC string		`json:"isrc"`
+	StartTime int	`json:"startTime"`
 }
 
 type RoundStartPayload struct {
 	RoundNumber int 		`json:"roundNumber"`
 	TotalRound int			`json:"totalRound"`
 	LetterCards []string	`json:"letterCards"`
-	StartTime int			`json:"startTime"`
 }
 
 type RoundResultPayload struct {

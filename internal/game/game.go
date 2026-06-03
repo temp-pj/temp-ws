@@ -30,11 +30,15 @@ func (g *Game) CurrentRound()int {
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 r := g.rounds[g.currentRound]
 
-	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards, StartTime: r.StartTime  }
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards,  }
 }
 
 func (g *Game) CurrentISRC()string {
 	return g.rounds[g.currentRound].Song.ISRC
+}
+
+func (g *Game) CurrentStartTime() int {
+	return g.rounds[g.currentRound].StartTime
 }
 
 func (g *Game) IsPlaying()bool {
