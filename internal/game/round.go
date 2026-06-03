@@ -8,4 +8,5 @@ type Round struct {
 	LetterCards []string
 	Song music.Song
 	State RoundState
+	StartTime int
  }
