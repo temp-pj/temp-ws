@@ -74,8 +74,8 @@ func (g *Game) NextRound()bool {
 	return true
 }
 
-func (g *Game) SubmitAnswer(answer string)bool {
-	return answer == g.rounds[g.currentRound].Answer
+func (g *Game) SubmitAnswer(input string) bool {
+    return Matches(input, g.rounds[g.currentRound].Answer)
 }
 
 func (g *Game) RemainingTime()int {
@@ -103,9 +103,11 @@ func NewGame(playerIDs []string, songs []music.Song, timeLimit int) *Game {
 	rounds := make([]Round, len(songs))
 
 	for i, song := range songs {
+		title := PrimaryTitle(song.Title)
+
 		rounds[i] = Round {
-			Answer: song.Title, 
-			LetterCards: generateLetterCards(song.Title),
+			Answer: title, 
+			LetterCards: generateLetterCards(title),
 			Song: song,
 			State: Idle,
 			StartTime: generateStartTime(song.Duration, timeLimit),
