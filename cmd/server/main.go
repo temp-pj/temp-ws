@@ -69,9 +69,12 @@ func handleWebSocket(hub *room.Hub) http.HandlerFunc {
             }
         }
 
-        cli := client.Client{ID: uuid.NewString(), Conn: conn, Send: make(chan *message.Message, 16)}
+        playerID := uuid.NewString()
+        cli := client.Client{ID: playerID, Conn: conn, Send: make(chan *message.Message, 16)}
+
         currentRoom.Register(&cli)
         defer currentRoom.Unregister(&cli)
+
         cli.Run(currentRoom.IncomingChannel())
     }
 }
