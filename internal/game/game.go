@@ -30,7 +30,10 @@ func (g *Game) CurrentRound()int {
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 r := g.rounds[g.currentRound]
 
-	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards,  }
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, 
+		TotalRounds: len(g.rounds), 
+		LetterCards: r.LetterCards, 
+		AnswerLength: utf8.RuneCountInString(r.Answer) }
 }
 
 func (g *Game) CurrentISRC()string {
