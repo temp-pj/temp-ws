@@ -4,6 +4,7 @@ import (
 	"math"
 	"temp-ws/internal/music"
 	"time"
+	"unicode/utf8"
 )
 
 type Game struct {
@@ -42,6 +43,10 @@ func (g *Game) CurrentISRC()string {
 
 func (g *Game) CurrentStartTime() int {
 	return g.rounds[g.currentRound].StartTime
+}
+
+func (g *Game) CurrentAnswer() string {
+	return g.rounds[g.currentRound].Answer
 }
 
 func (g *Game) IsPlaying()bool {
