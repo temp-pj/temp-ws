@@ -244,9 +244,6 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			log.Println("READY_TO_PLAY 시작")
 			log.Println("READY_TO_PLAY 요청한 ID: ", msg.From)
 
-			var clientList []string
-			for id := range r.clients { clientList = append(clientList, id) }
-
 			if r.game == nil { return nil, nil }
 			log.Println("게임 있음")
 
