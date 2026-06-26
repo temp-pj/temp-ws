@@ -72,6 +72,20 @@ func (g *Game) EndRound(winnerID string) {
 	}
 }
 
+func (g *Game) Winner() string {
+    var maxScore int
+    var winner string
+    
+    for id, score := range g.scores {
+        if score > maxScore {
+            maxScore = score
+            winner = id
+        }
+    }
+    
+    return winner
+}
+
 func (g *Game) NextRound()bool {
 	if len(g.rounds) <= g.currentRound+1 { return false }
 
