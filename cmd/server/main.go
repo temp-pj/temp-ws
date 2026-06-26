@@ -60,7 +60,8 @@ func handleWebSocket(hub *room.Hub) http.HandlerFunc {
         var currentRoom *room.Room
 
         if roomID == "" {
-            currentRoom, _ = hub.CreateRoom()
+            currentRoom, roomID = hub.CreateRoom()
+            log.Println("생성된 방 ID: ", roomID)
         } else {
             currentRoom = hub.FindRoom(roomID)
             if currentRoom == nil {
