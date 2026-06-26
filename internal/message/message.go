@@ -6,9 +6,9 @@ import (
 )
 
 type Message struct {
-	Type string
-	Payload json.RawMessage
-	Timestamp int64
+	Type string				`json:"type"`
+	Payload json.RawMessage	`json:"payload"`
+	Timestamp int64			`json:"timestamp"`
 }
 
 func New(msgType string, payload any) (*Message, error) {

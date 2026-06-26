@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"sync"
 	"temp-ws/internal/client"
 	"temp-ws/internal/game"
@@ -42,14 +43,41 @@ func (r *Room) Run() {
 		select {
 			case client := <- r.register:
 				if client == nil || client.Send == nil { continue }
+
+				if r.hostID == "" { r.hostID = client.ID }
 				r.clients[client.ID] = client
 
-				msg, err := message.New(message.TypePlayerJoined, message.PlayerJoinedPayload { PlayerID: client.ID })
+				playerIDs := make([]string, 0, len(r.clients))
+				for id := range r.clients {
+					playerIDs = append(playerIDs, id)
+				}
+
+				welcomeMsg, err := message.New(message.TypeWelcome, message.WelcomePayload { HostID: r.hostID, 
+					RoomID: r.roomID, 
+					PlayerID: client.ID, 
+					Players: playerIDs,
+					RoomState: r.state.String(),
+					MaxPlayers: 8,
+				  })
 				if err != nil { continue }
+
+				playerJoinedMsg, err := message.New(message.TypePlayerJoined, message.PlayerJoinedPayload { PlayerID: client.ID })
+				if err != nil { continue }
+
+				select {
+					case client.Send <- welcomeMsg:
+
+					default:
+						delete(r.clients, client.ID)
+						close(client.Send)
+						continue
+				}
 				
 				for _, c := range r.clients {
+					if c.ID == client.ID { continue }
+
 					select {
-						case c.Send <- msg:
+						case c.Send <- playerJoinedMsg:
 
 						default:
 							delete(r.clients, c.ID)
@@ -72,6 +100,30 @@ func (r *Room) Run() {
 							delete(r.clients, c.ID)
 							close(c.Send)
 					}
+				}
+
+				if client.ID == r.hostID && len(r.clients) > 0 {
+					for id := range r.clients {
+						r.hostID = id
+						break
+					}
+
+					hostMsg, err := message.New(message.TypeHostChanged, message.HostChangedPayload{ PlayerID: r.hostID })
+					if err != nil { continue }
+
+					for _, c := range r.clients {
+						select {
+							case c.Send <- hostMsg:
+							default:
+								delete(r.clients, c.ID)
+								close(c.Send)
+						}
+					}
+				}
+
+				if len(r.clients) == 0 {
+					r.Close()
+					continue
 				}
 			
 			case msg := <- r.broadcast:
@@ -103,7 +155,7 @@ func (r *Room) Run() {
 				if !r.game.IsPlaying() { continue }
 
 				remaining := r.game.RemainingTime()
-				msg, err := message.New("COUNTDOWN", message.CountDownPayload { Remaining: remaining })
+				msg, err := message.New(message.TypeCountDown, message.CountDownPayload { Remaining: remaining })
 				if err != nil { continue }
 
 				for _, c := range r.clients {
@@ -144,6 +196,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 	switch msg.Message.Type {
 		case "START_GAME":
 			log.Println("HOST ID: ", r.hostID)
+			if msg.From != r.hostID { return nil, nil }
 			var payload message.StartGamePayload
 
 			err := json.Unmarshal(msg.Message.Payload, &payload)
@@ -172,8 +225,9 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 					r.game = game.NewGame(playerIDs, songs, payload.TimeLimit)
 					isrc := r.game.CurrentISRC()
 					startTime := r.game.CurrentStartTime()
-					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc, StartTime: startTime }
-					preloadSongMsg, _ := message.New("PRELOAD_SONG", preloadSongPayload)
+					roundNumber := r.game.CurrentRound()
+					preloadSongPayload := message.PreloadSongPayload { ISRC: isrc, StartTime: startTime, RoundNumber: roundNumber }
+					preloadSongMsg, _ := message.New(message.TypePreloadSong, preloadSongPayload)
 
 					return []Action {
 						{ Type: Broadcast, Message: preloadSongMsg },
@@ -182,11 +236,17 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			}()
 			
 			r.state = Playing
-			gameStartedMsg, _ := message.New("GAME_STARTED", nil)
+			gameStartedMsg, _ := message.New(message.TypeGameStarted, nil)
 
 			return []Action{ {Type: Broadcast, Message: gameStartedMsg }, }, nil
 
 		case "READY_TO_PLAY":
+			log.Println("READY_TO_PLAY 시작")
+			log.Println("READY_TO_PLAY 요청한 ID: ", msg.From)
+
+			var clientList []string
+			for id := range r.clients { clientList = append(clientList, id) }
+
 			if r.game == nil { return nil, nil }
 			log.Println("게임 있음")
 
@@ -239,13 +299,14 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			
 			roundStartInfo := r.game.GetRoundStartInfo()
 
-			roundStartPayload := message.RoundStartPayload { 
+			roundStartedPayload := message.RoundStartPayload { 
 				RoundNumber: roundStartInfo.RoundNumber, 
-				TotalRound: roundStartInfo.TotalRounds, 
+				TotalRounds: roundStartInfo.TotalRounds, 
 				LetterCards: roundStartInfo.LetterCards,
+				AnswerLength: roundStartInfo.AnswerLength,
 			}
 
-			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
+			roundStartMsg, _ := message.New(message.TypeRoundStarted, roundStartedPayload)
 			log.Println("브로드캐스트까지 성공")
 			return []Action { { Type: Broadcast, Message: roundStartMsg } }, nil
 
@@ -262,7 +323,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 
 			if _, ok := r.clients[target]; !ok { return nil, nil }
 
-			kickPlayerMsg, _ := message.New("KICKED", nil)
+			kickPlayerMsg, _ := message.New(message.TypePlayerKicked, nil)
 		
 			return []Action { { Type: Unicast, Target: target, Message: kickPlayerMsg } }, func() { 
 				if c, ok := r.clients[target]; ok {
@@ -286,7 +347,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 
 			if !correct {
 				wrongAnswerPayload := message.WrongAnswerPayload { PlayerID: msg.From, WrongAnswer: answer }
-				wrongAnswerMsg, _ := message.New("WRONG_ANSWER", wrongAnswerPayload)
+				wrongAnswerMsg, _ := message.New(message.TypeWrongAnswer, wrongAnswerPayload)
 
 				return []Action{
 					{Type: Broadcast, Message: wrongAnswerMsg },
@@ -302,14 +363,17 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 func (r *Room) endRoundActions(winner string) ([]Action, func()) {
     r.game.EndRound(winner)
 
-    roundResultMsg, _ := message.New("ROUND_RESULT", message.RoundResultPayload{
-        Winner: winner, Scores: r.game.Scores(),
+    roundResultMsg, _ := message.New(message.TypeRoundResult, message.RoundResultPayload{
+        Winner: winner, CorrectAnswer: r.game.CurrentAnswer(), Scores: r.game.Scores(),
     })
 
     if r.game.NextRound() {
 		isrc := r.game.CurrentISRC()
-        preloadMsg, _ := message.New("PRELOAD_SONG", message.PreloadSongPayload{
+		startTime := r.game.CurrentStartTime()
+        preloadMsg, _ := message.New(message.TypePreloadSong, message.PreloadSongPayload{
             ISRC: isrc,
+			StartTime: startTime,
+			RoundNumber: r.game.CurrentRound(),
         })
 
         return []Action{
@@ -318,11 +382,12 @@ func (r *Room) endRoundActions(winner string) ([]Action, func()) {
         }, nil
     }
 
-    gameOverMsg, _ := message.New("GAME_OVER", message.GameOverPayload{
-        Score: r.game.Scores(),
+    gameOverMsg, _ := message.New(message.TypeGameOver, message.GameOverPayload{
+        Winner: r.game.Winner(),
+		Scores: r.game.Scores(),
     })
 
-	r.state = Finished
+	r.state = Result
 
     return []Action{
 		{Type: Broadcast, Message: roundResultMsg},
@@ -342,7 +407,6 @@ func (r *Room) executeActions(actions []Action) {
 						delete(r.clients, id)
 						close(c.Send)
 					}
-					
 				}
 
 			case Unicast:
@@ -353,7 +417,6 @@ func (r *Room) executeActions(actions []Action) {
 							delete(r.clients, a.Target)
 							close(target.Send)
 					}
-					
 				}
 		}
 	}
@@ -385,8 +448,7 @@ type RoomState int
 const (
 	Waiting RoomState = iota
 	Playing
-	Finished
-	Closed
+	Result
 )
 
 func (s RoomState) String() string {
@@ -395,10 +457,8 @@ func (s RoomState) String() string {
 			return "waiting"
 		case Playing:
 			return "playing"
-		case Finished:
-			return "finished"
-		case Closed:
-			return "closed"
+		case Result:
+			return "result"
 	}
 
 	return "unknown"
