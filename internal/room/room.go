@@ -143,9 +143,11 @@ func (r *Room) IncomingChannel() chan *message.ClientMessage {
 func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()) {
 	switch msg.Message.Type {
 		case "START_GAME":
+			log.Println("HOST ID: ", r.hostID)
 			var payload message.StartGamePayload
 
 			err := json.Unmarshal(msg.Message.Payload, &payload)
+			log.Println("Unmarshal 결과:", err, payload)
 			if err != nil { return nil, nil }
 
 			playerIDs := make([]string, 0, len(r.clients))
@@ -162,6 +164,8 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			go func() {
 				songs, err := r.musicProvider.FetchSongs(context.Background(), category, trackCount, payload.TimeLimit )
 				
+				log.Println("FetchSongs 결과:", len(songs), err)
+
 				if err != nil || len(songs) == 0 { return }
 				
 				r.internal <- func() ([]Action, func()) {
@@ -184,25 +188,38 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 
 		case "READY_TO_PLAY":
 			if r.game == nil { return nil, nil }
+			log.Println("게임 있음")
 
 			var payload message.ReadyToPlayPayload
 			err := json.Unmarshal(msg.Message.Payload, &payload)
 
 			if err != nil { return nil, nil }
+			log.Println("JSON 언마샬")
 
-			if payload.RoundNumber != r.game.CurrentRound() { return nil, nil }
+			if payload.RoundNumber != r.game.CurrentRound() { 
+				log.Printf("페이로드 라운드 넘버: %d, 서버 라운드 넘버: %d", payload.RoundNumber, r.game.CurrentRound())
+				return nil, nil 
+			}
+			log.Println("라운드 넘버 통과")
 
 			r.ready[msg.From] = true
 			allReady := true
 
+			log.Println("=== clients ===")
+
 			for id := range r.clients {
+				log.Println("READY ID: ", id)
 				if !r.ready[id] {  
 					allReady = false
-					break
+					log.Printf("client=%s ready=%v\n", id, r.ready[id])
 				}
 			}
 
+			log.Printf("총 clients=%d, ready맵=%v\n", len(r.clients), r.ready)
+
 			if !allReady { return nil, nil }
+
+			log.Println("전부 준비 완료")
 
 			r.ready = make(map[string]bool)
 
@@ -217,6 +234,8 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 					return r.endRoundActions("")
 				}
 			})
+
+			log.Println("서버 라운드 스타트")
 			
 			roundStartInfo := r.game.GetRoundStartInfo()
 
@@ -227,7 +246,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			}
 
 			roundStartMsg, _ := message.New("ROUND_START", roundStartPayload)
-
+			log.Println("브로드캐스트까지 성공")
 			return []Action { { Type: Broadcast, Message: roundStartMsg } }, nil
 
 
@@ -315,6 +334,7 @@ func (r *Room) executeActions(actions []Action) {
 	for _, a := range actions {
 		switch a.Type {
 			case Broadcast:
+				log.Printf("브로드캐스트: %d명에게", len(r.clients))
 				for id, c := range r.clients {
 					select {
 					case c.Send <- a.Message:
