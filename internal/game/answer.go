@@ -16,5 +16,5 @@ func PrimaryTitle(title string) string {
 	if idx := strings.Index(clean, " - "); idx != -1 {
 		clean = clean[:idx]
 	}
-	return clean
+	return strings.Join(strings.Fields(clean), "")
 }
