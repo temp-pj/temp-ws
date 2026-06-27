@@ -32,6 +32,7 @@ type Room struct {
 	closeOnce sync.Once
 	game *game.Game
 	musicProvider MusicProvider
+	onEmpty func(roomID string)
 }
 
 func (r *Room) Run() {
@@ -68,11 +69,12 @@ func (r *Room) Run() {
 					case client.Send <- welcomeMsg:
 
 					default:
-						delete(r.clients, client.ID)
-						close(client.Send)
+						r.removeClient(client.ID)
 						continue
 				}
 				
+				var dead []string
+
 				for _, c := range r.clients {
 					if c.ID == client.ID { continue }
 
@@ -80,63 +82,65 @@ func (r *Room) Run() {
 						case c.Send <- playerJoinedMsg:
 
 						default:
-							delete(r.clients, c.ID)
-							close(c.Send)
+							dead = append(dead, c.ID)
 					}
 				}
 
+				for _, id := range dead {
+					r.removeClient(id)
+				}
+
 			case client := <- r.unregister:
-				delete(r.clients, client.ID)
-				close(client.Send)
+				hostChanged := r.removeClient(client.ID)
 
 				msg, err := message.New(message.TypePlayerLeft, message.PlayerLeftPayload { PlayerID: client.ID })
 				if err != nil { continue }
 
+				var dead []string
 				for _, c := range r.clients {
 					select {
 						case c.Send <- msg:
 
 						default:
-							delete(r.clients, c.ID)
-							close(c.Send)
+							dead = append(dead, c.ID)
 					}
 				}
 
-				if client.ID == r.hostID && len(r.clients) > 0 {
-					for id := range r.clients {
-						r.hostID = id
-						break
-					}
+				for _, id := range dead { r.removeClient(id) }
 
+				if hostChanged && r.hostID != "" {
 					hostMsg, err := message.New(message.TypeHostChanged, message.HostChangedPayload{ PlayerID: r.hostID })
-					if err != nil { continue }
-
-					for _, c := range r.clients {
-						select {
-							case c.Send <- hostMsg:
-							default:
-								delete(r.clients, c.ID)
-								close(c.Send)
+					if err == nil {
+						var dead2 []string
+						for _, c := range r.clients {
+							select {
+								case c.Send <- hostMsg:
+								default:
+									dead2 = append(dead2, c.ID)
+							}
 						}
+						for _, id := range dead2 { r.removeClient(id) }
 					}
 				}
 
 				if len(r.clients) == 0 {
-					r.Close()
+					if r.onEmpty != nil { go r.onEmpty(r.roomID) }
 					continue
 				}
 			
 			case msg := <- r.broadcast:
+				var dead []string
+
 				for _, c := range r.clients {
 					select {
 						case c.Send <- msg:
 
 						default: 
-							delete(r.clients, c.ID)
-							close(c.Send)
-
+							dead = append(dead, c.ID)
 					}
 				}
+
+				for _, id := range dead { r.removeClient(id) }
 
 			case clientMessage := <- r.incoming:
 					actions, cleanup := r.HandleClientMessage(clientMessage)
@@ -158,13 +162,17 @@ func (r *Room) Run() {
 				msg, err := message.New(message.TypeCountDown, message.CountDownPayload { Remaining: remaining })
 				if err != nil { continue }
 
+				var dead []string
 				for _, c := range r.clients {
 					select {
 					case c.Send <- msg:
 					default:
-						delete(r.clients, c.ID)
-						close(c.Send)
+						dead = append(dead, c.ID)
 					}
+				}
+
+				for _, id := range dead {
+					r.removeClient(id)
 				}
 
 			case <- r.quit: return 
@@ -269,6 +277,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 				if !r.ready[id] {  
 					allReady = false
 					log.Printf("client=%s ready=%v\n", id, r.ready[id])
+					break
 				}
 			}
 
@@ -323,12 +332,7 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 			kickPlayerMsg, _ := message.New(message.TypePlayerKicked, nil)
 		
 			return []Action { { Type: Unicast, Target: target, Message: kickPlayerMsg } }, func() { 
-				if c, ok := r.clients[target]; ok {
-					close(c.Send)
-					delete(r.clients, c.ID)
-				}
-
-				delete(r.ready, target)
+					r.removeClient(target)
 			 }
 		
 		case "SUBMIT_ANSWER":
@@ -355,6 +359,29 @@ func (r *Room) HandleClientMessage(msg *message.ClientMessage) ([]Action, func()
 	}
 
 	return nil, nil
+}
+
+func (r *Room) removeClient(id string) bool {
+	c, ok := r.clients[id]
+
+	if !ok { return false }
+
+	close(c.Send)
+	delete(r.clients, id)
+	delete(r.ready, id)
+
+
+	if id == r.hostID {
+        r.hostID = ""
+        for remainingID := range r.clients {
+            r.hostID = remainingID
+            break
+        }
+
+		return true
+    }
+
+	return false
 }
 
 func (r *Room) endRoundActions(winner string) ([]Action, func()) {
@@ -396,23 +423,24 @@ func (r *Room) executeActions(actions []Action) {
 	for _, a := range actions {
 		switch a.Type {
 			case Broadcast:
+				var dead []string
 				log.Printf("브로드캐스트: %d명에게", len(r.clients))
 				for id, c := range r.clients {
 					select {
 					case c.Send <- a.Message:
 					default:
-						delete(r.clients, id)
-						close(c.Send)
+						dead = append(dead, id)
 					}
 				}
+
+				for _, id := range dead { r.removeClient(id) }
 
 			case Unicast:
 				if target, ok := r.clients[a.Target]; ok {
 					select {
 						case target.Send <- a.Message:
 						default:
-							delete(r.clients, a.Target)
-							close(target.Send)
+							r.removeClient(a.Target)
 					}
 				}
 		}
@@ -423,7 +451,7 @@ func (r *Room) IsPlaying()bool {
 	return r.state == Playing
 }
 
-func NewRoom(roomID string, musicProvider MusicProvider) *Room {
+func NewRoom(roomID string, musicProvider MusicProvider, onEmpty func(string)) *Room {
 	return &Room {
 		clients: make(map[string]*client.Client),
 		register: make(chan *client.Client),
@@ -436,6 +464,7 @@ func NewRoom(roomID string, musicProvider MusicProvider) *Room {
 		ready: make(map[string]bool),
 		quit: make(chan struct{}),
 		musicProvider: musicProvider,
+		onEmpty: onEmpty,
 	}
 }
 
