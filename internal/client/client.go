@@ -21,7 +21,6 @@ func (c *Client) Run(incoming chan <- *message.ClientMessage) {
 	go func() {
 		for msg := range c.Send {
 			data, err := json.Marshal(msg)
-			log.Println("➡️ conn에 write:", string(data))
 			if err != nil { continue }
 			if err := c.Conn.Write(ctx, websocket.MessageText, data); err != nil {
 				log.Println("conn write 실패:", err)
