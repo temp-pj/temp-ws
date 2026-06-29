@@ -4,6 +4,7 @@ import (
 	"math"
 	"temp-ws/internal/music"
 	"time"
+	"unicode/utf8"
 )
 
 type Game struct {
@@ -30,7 +31,10 @@ func (g *Game) CurrentRound()int {
 func (g *Game) GetRoundStartInfo() RoundStartInfo {
 	 r := g.rounds[g.currentRound]
 
-	 return RoundStartInfo { RoundNumber: g.currentRound + 1, TotalRounds: len(g.rounds), LetterCards: r.LetterCards,  }
+	 return RoundStartInfo { RoundNumber: g.currentRound + 1, 
+		TotalRounds: len(g.rounds), 
+		LetterCards: r.LetterCards, 
+		AnswerLength: utf8.RuneCountInString(r.Answer) }
 }
 
 func (g *Game) CurrentISRC()string {
@@ -39,6 +43,10 @@ func (g *Game) CurrentISRC()string {
 
 func (g *Game) CurrentStartTime() int {
 	return g.rounds[g.currentRound].StartTime
+}
+
+func (g *Game) CurrentAnswer() string {
+	return g.rounds[g.currentRound].Answer
 }
 
 func (g *Game) IsPlaying()bool {
@@ -64,6 +72,20 @@ func (g *Game) EndRound(winnerID string) {
 	}
 }
 
+func (g *Game) Winner() string {
+    var maxScore int
+    var winner string
+    
+    for id, score := range g.scores {
+        if score > maxScore {
+            maxScore = score
+            winner = id
+        }
+    }
+    
+    return winner
+}
+
 func (g *Game) NextRound()bool {
 	if len(g.rounds) <= g.currentRound+1 { return false }
 
@@ -71,8 +93,8 @@ func (g *Game) NextRound()bool {
 	return true
 }
 
-func (g *Game) SubmitAnswer(answer string)bool {
-	return answer == g.rounds[g.currentRound].Answer
+func (g *Game) SubmitAnswer(input string) bool {
+    return Matches(input, g.rounds[g.currentRound].Answer)
 }
 
 func (g *Game) RemainingTime()int {
@@ -100,9 +122,11 @@ func NewGame(playerIDs []string, songs []music.Song, timeLimit int) *Game {
 	rounds := make([]Round, len(songs))
 
 	for i, song := range songs {
+		title := PrimaryTitle(song.Title)
+
 		rounds[i] = Round {
-			Answer: song.Title, 
-			LetterCards: generateLetterCards(song.Title),
+			Answer: title, 
+			LetterCards: generateLetterCards(title),
 			Song: song,
 			State: Idle,
 			StartTime: generateStartTime(song.Duration, timeLimit),

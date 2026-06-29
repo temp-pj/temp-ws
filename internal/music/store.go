@@ -27,7 +27,7 @@ func (s *Store) FetchSongs(ctx context.Context, c Category, count int, timeLimit
 		  AND a.type = $5
 		  AND ($6 = '' OR a.gender = $6 OR a.gender IS NULL)
 		  AND r.listen_count >= 1000
-		  AND r.duration >= ($7 + 10) * 1000
+		  AND r.duration >= ($7 + 10)
 		ORDER BY RANDOM()
 		LIMIT $8;
 	`

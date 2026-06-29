@@ -4,12 +4,25 @@ import (
 	"temp-ws/internal/music"
 )
 
+type WelcomePayload struct {
+	HostID string		`json:"hostID"`
+	PlayerID string		`json:"playerID"`
+	RoomID string		`json:"roomID"`
+	Players []string	`json:"players"`
+	RoomState string	`json:"roomState"`
+	MaxPlayers int		`json:"maxPlayers"`
+}
+
 type PlayerJoinedPayload struct {
-	PlayerID string 
+	PlayerID string			`json:"playerID"`
 }
 
 type PlayerLeftPayload struct {
-	PlayerID string 
+	PlayerID string			`json:"playerID"`
+}
+
+type HostChangedPayload struct {
+	PlayerID string			`json:"playerID"`
 }
 
 type StartGamePayload struct {
@@ -19,7 +32,7 @@ type StartGamePayload struct {
 }
 
 type ReadyToPlayPayload struct {
-    RoundNumber int
+    RoundNumber int			`json:"roundNumber"`
 }
 
 type CountDownPayload struct {
@@ -27,26 +40,29 @@ type CountDownPayload struct {
 }
 
 type KickPlayerPayload struct {
-	TargetPlayerID string
+	TargetPlayerID string		`json:"targetPlayerID"`
 }
 
 type SubmitAnswerPayload struct {
-	Answer string
+	Answer string		`json:"answer"`
 }
 
 type PreloadSongPayload struct {
 	ISRC string		`json:"isrc"`
 	StartTime int	`json:"startTime"`
+	RoundNumber int    `json:"roundNumber"`
 }
 
 type RoundStartPayload struct {
 	RoundNumber int 		`json:"roundNumber"`
-	TotalRound int			`json:"totalRound"`
+	TotalRounds int			`json:"totalRounds"`
+	AnswerLength int		`json:"answerLength"`
 	LetterCards []string	`json:"letterCards"`
 }
 
 type RoundResultPayload struct {
 	Winner string 			`json:"winner"`
+	CorrectAnswer string	`json:"correctAnswer"`
 	Scores map[string]int 	`json:"scores"`
 }
 
@@ -57,5 +73,5 @@ type WrongAnswerPayload struct {
 
 type GameOverPayload struct {
 	Winner string			`json:"winner"`
-	Score map[string]int	`json:"score"`
+	Scores map[string]int	`json:"scores"`
 }

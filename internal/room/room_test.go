@@ -11,7 +11,7 @@ import (
 
 func TestRegister(t *testing.T) {
 	id := uuid.NewString()
-	room := NewRoom(id, nil)
+	room := NewRoom(id, nil, nil)
 	go room.Run()
 	cli := &client.Client{Send: make(chan *message.Message, 3)}
 
@@ -25,7 +25,7 @@ func TestRegister(t *testing.T) {
 
 func TestUnRegister(t *testing.T) {
 	id := uuid.NewString()
-	room := NewRoom(id, nil)
+	room := NewRoom(id, nil, nil)
 	go room.Run()
 	cli := &client.Client{Send: make(chan *message.Message, 3)}
 
@@ -41,7 +41,7 @@ func TestUnRegister(t *testing.T) {
 
 func TestBroadcast(t *testing.T) {
 	id := uuid.NewString()
-	room := NewRoom(id, nil)
+	room := NewRoom(id, nil, nil)
 	go room.Run()
 
 	firstClient := &client.Client{ ID: uuid.NewString(), Send: make(chan *message.Message, 3) }

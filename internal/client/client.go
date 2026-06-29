@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"temp-ws/internal/message"
 
 	"github.com/coder/websocket"
@@ -22,6 +23,7 @@ func (c *Client) Run(incoming chan <- *message.ClientMessage) {
 			data, err := json.Marshal(msg)
 			if err != nil { continue }
 			if err := c.Conn.Write(ctx, websocket.MessageText, data); err != nil {
+				log.Println("conn write 실패:", err)
 				return
 			}
 		}

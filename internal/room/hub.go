@@ -18,7 +18,7 @@ func NewHub(mp MusicProvider) *Hub {
 
 func (h *Hub) CreateRoom() (*Room, string) {
 	roomID := uuid.NewString()
-	newRoom := NewRoom(roomID, h.musicProvider)
+	newRoom := NewRoom(roomID, h.musicProvider, h.DeleteRoom)
 
 	h.mu.Lock()
 	h.rooms[roomID] = newRoom

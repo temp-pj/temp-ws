@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -26,7 +25,7 @@ func main() {
     mux := http.NewServeMux()
     mux.HandleFunc("/ws", handleWebSocket(hub))
 
-    fmt.Println("서버 시작: localhost:8080")
+    log.Println("서버 시작: localhost:8080")
     if err := http.ListenAndServe(":8080", mux); err != nil {
         log.Fatal("서버 에러:", err)
     }
@@ -47,7 +46,7 @@ func mustConnectDB() *sql.DB {
         log.Fatal("DB Ping 실패:", err)
     }
 
-    fmt.Println("DB 연결 성공!")
+    log.Println("DB 연결 성공!")
     return db
 }
 
@@ -61,7 +60,8 @@ func handleWebSocket(hub *room.Hub) http.HandlerFunc {
         var currentRoom *room.Room
 
         if roomID == "" {
-            currentRoom, _ = hub.CreateRoom()
+            currentRoom, roomID = hub.CreateRoom()
+            log.Println("생성된 방 ID: ", roomID)
         } else {
             currentRoom = hub.FindRoom(roomID)
             if currentRoom == nil {
@@ -70,9 +70,12 @@ func handleWebSocket(hub *room.Hub) http.HandlerFunc {
             }
         }
 
-        cli := client.Client{ID: uuid.NewString(), Conn: conn, Send: make(chan *message.Message, 16)}
+        playerID := uuid.NewString()
+        cli := client.Client{ID: playerID, Conn: conn, Send: make(chan *message.Message, 16)}
+
         currentRoom.Register(&cli)
         defer currentRoom.Unregister(&cli)
+
         cli.Run(currentRoom.IncomingChannel())
     }
 }
